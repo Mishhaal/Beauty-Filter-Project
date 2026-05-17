@@ -1,0 +1,8 @@
+Results Summary (2025-12-28 21:51:42)
+Images analyzed: 200
+
+PSNR (gray, dB): mean=9.311, min=4.938, max=33.675
+Mean Abs Diff (gray): mean=59.391, min=2.586, max=108.586
+
+Edge Variance (Original): mean=192.406, min=33.014, max=1828.813
+Edge Variance (Processed): mean=249.306, min=28.854, max=840.889

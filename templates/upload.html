@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Beauty Filter - Upload Image</title>
+
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: Arial, sans-serif;
+      background: url('{{ url_for("static", filename="bgimg.png") }}') no-repeat center center fixed;
+      background-size: cover;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      flex-direction: column;
+      background-attachment: fixed;
+    }
+
+    .container {
+      text-align: center;
+      padding: 30px;
+      background-color: rgba(255, 255, 255, 0.8);
+      border-radius: 10px;
+      box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.1);
+      max-width: 520px;
+      width: 100%;
+      margin: 20px;
+    }
+
+    h1 {
+      color: #800000;
+      font-size: 28px;
+      margin-bottom: 12px;
+      font-weight: 600;
+    }
+
+    p {
+      color: #666;
+      font-size: 16px;
+      margin-bottom: 20px;
+      line-height: 1.4;
+    }
+
+    .file-input-container {
+      position: relative;
+      width: 100%;
+      height: 200px;
+      border: 2px dashed #0088cc;
+      border-radius: 10px;
+      padding: 20px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      background-color: #fff;
+      margin-top: 10px;
+    }
+
+    .file-input-container:hover { background-color: #f0f8ff; }
+
+    .file-input-container input[type="file"] {
+      position: absolute;
+      opacity: 0;
+      z-index: 2;
+      width: 100%;
+      height: 100%;
+      cursor: pointer;
+      inset: 0;
+    }
+
+    .file-input-container label {
+      color: #0088cc;
+      font-size: 18px;
+      font-weight: bold;
+      z-index: 1;
+      pointer-events: none;
+    }
+
+    .hint {
+      margin-top: 8px;
+      font-size: 12px;
+      color: #666;
+      z-index: 1;
+      pointer-events: none;
+    }
+
+    .image-preview {
+      display: none;
+      margin-top: 16px;
+      max-width: 100%;
+      max-height: 220px;
+      object-fit: contain;
+      border-radius: 10px;
+      border: 1px solid #ddd;
+      background: #fff;
+    }
+
+    .submit-btn {
+      background-color: #0088cc;
+      color: white;
+      font-size: 18px;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      margin-top: 16px;
+      width: 100%;
+    }
+
+    .submit-btn:hover { background-color: #006fa6; }
+    .submit-btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    .image-container {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      margin-top: 22px;
+      width: 100%;
+      flex-wrap: wrap;
+    }
+
+    .panel {
+      flex: 1;
+      min-width: 220px;
+    }
+
+    .panel h2 {
+      color: #800000;
+      font-size: 18px;
+      margin-bottom: 10px;
+    }
+
+    .panel img {
+      width: 100%;
+      height: 200px;
+      object-fit: cover;
+      border-radius: 10px;
+      border: 1px solid #ddd;
+      background: #fff;
+      display: none;
+    }
+
+    .loading {
+      font-size: 16px;
+      color: #0088cc;
+      display: none;
+      margin-top: 10px;
+      font-weight: bold;
+    }
+
+    .error-box {
+      display: none;
+      margin-top: 12px;
+      padding: 10px 12px;
+      border-radius: 8px;
+      background: rgba(255, 0, 0, 0.08);
+      border: 1px solid rgba(255, 0, 0, 0.2);
+      color: #900;
+      text-align: left;
+      font-size: 14px;
+      white-space: pre-wrap;
+    }
+
+    @media (max-width: 600px) {
+      .container { width: 92%; }
+      .panel { min-width: 100%; }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <h1>Upload Your Image</h1>
+    <p>Choose an image to apply the beauty filter. The filter will smooth skin and enhance details.</p>
+
+    <!-- NOTE: form is optional because we use fetch,
+         but it's nice for semantics and fallback -->
+    <form id="upload-form" action="/upload" method="POST" enctype="multipart/form-data" onsubmit="event.preventDefault(); submitImage();">
+      <div class="file-input-container">
+        <!-- IMPORTANT: name="file" matches Flask request.files["file"] -->
+        <input type="file" id="file-input" name="file" accept="image/*" />
+        <label for="file-input">Click or Drag an Image Here</label>
+        <div class="hint">Supported: JPG, PNG, WEBP, BMP</div>
+      </div>
+
+      <!-- Preview -->
+      <img id="image-preview" class="image-preview" alt="Image Preview" />
+
+      <button id="submit-btn" class="submit-btn" type="submit">Apply Filter</button>
+
+      <div id="loading" class="loading">Processing...</div>
+      <div id="error-box" class="error-box"></div>
+    </form>
+
+    <!-- Before/After -->
+    <div class="image-container">
+      <div class="panel">
+        <h2>Original Image</h2>
+        <img id="original-image" src="" alt="Before" />
+      </div>
+      <div class="panel">
+        <h2>Processed Image</h2>
+        <img id="processed-image" src="" alt="After" />
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const fileInput = document.getElementById('file-input');
+    const previewImg = document.getElementById('image-preview');
+    const originalImg = document.getElementById('original-image');
+    const processedImg = document.getElementById('processed-image');
+    const loadingEl = document.getElementById('loading');
+    const errorBox = document.getElementById('error-box');
+    const submitBtn = document.getElementById('submit-btn');
+
+    // Click-to-upload is handled by label/input already,
+    // but drag & drop support helps:
+    const dropZone = document.querySelector('.file-input-container');
+
+    function showError(msg) {
+      errorBox.style.display = 'block';
+      errorBox.textContent = msg;
+    }
+
+    function clearError() {
+      errorBox.style.display = 'none';
+      errorBox.textContent = '';
+    }
+
+    function setLoading(isLoading) {
+      loadingEl.style.display = isLoading ? 'block' : 'none';
+      submitBtn.disabled = isLoading;
+    }
+
+    function showImage(el, src) {
+      el.src = src;
+      el.style.display = 'block';
+    }
+
+    function previewSelectedFile(file) {
+      clearError();
+
+      if (!file) return;
+
+      // Basic client-side type check
+      if (!file.type.startsWith('image/')) {
+        showError('Please upload a valid image file.');
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = function () {
+        showImage(previewImg, reader.result);
+        showImage(originalImg, reader.result);
+      };
+      reader.readAsDataURL(file);
+    }
+
+    fileInput.addEventListener('change', () => {
+      const file = fileInput.files[0];
+      previewSelectedFile(file);
+    });
+
+    // Drag & drop
+    ['dragenter', 'dragover'].forEach(evt => {
+      dropZone.addEventListener(evt, (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        dropZone.style.backgroundColor = '#f0f8ff';
+      });
+    });
+
+    ['dragleave', 'drop'].forEach(evt => {
+      dropZone.addEventListener(evt, (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        dropZone.style.backgroundColor = '#fff';
+      });
+    });
+
+    dropZone.addEventListener('drop', (e) => {
+      const file = e.dataTransfer.files && e.dataTransfer.files[0];
+      if (!file) return;
+
+      // Put dropped file into the input (best effort)
+      const dt = new DataTransfer();
+      dt.items.add(file);
+      fileInput.files = dt.files;
+
+      previewSelectedFile(file);
+    });
+
+    async function submitImage() {
+      clearError();
+
+      const file = fileInput.files[0];
+      if (!file) {
+        showError('Please select an image first!');
+        return;
+      }
+
+      setLoading(true);
+
+      try {
+        const formData = new FormData();
+        formData.append('file', file); // MUST be 'file' for Flask
+
+        const response = await fetch('/upload', {
+          method: 'POST',
+          body: formData
+        });
+
+        if (!response.ok) {
+          // Get server text error if any
+          const text = await response.text();
+          throw new Error(text || `Server error (${response.status})`);
+        }
+
+        const blob = await response.blob();
+
+        // If server returned an HTML error page but still 200 (rare),
+        // blob might not be an image. This helps detect it:
+        if (blob.type && !blob.type.startsWith('image/')) {
+          const text = await blob.text();
+          throw new Error(text || 'Server did not return an image.');
+        }
+
+        const url = URL.createObjectURL(blob);
+        showImage(processedImg, url);
+
+      } catch (err) {
+        console.error(err);
+        showError(err.message || 'An error occurred while applying the filter.');
+      } finally {
+        setLoading(false);
+      }
+    }
+  </script>
+</body>
+</html>
